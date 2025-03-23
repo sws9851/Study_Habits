@@ -1,0 +1,1391 @@
+---
+title: "Phase_2"
+author: "Samir Mohamed"
+date: "2025-2-20"
+output: html_document
+---
+- As our sample size is more than 30, we will use the Z table all over our calculations
+- -----------Introducing important libraries--------
+```{r}
+library(readxl)
+file_path <- "D:/Study_Habits/Study_Habits.xlsx"
+Study_Habits <- read_excel(file_path)
+library(ggplot2)
+library(dplyr)
+library(psych)
+library(janitor)
+library(knitr)
+```
+- -------------outliers removing built in function--------------
+```{r}
+outliers <- function(column) {
+  Q1 <- quantile(column, 0.25, na.rm = TRUE)
+  Q3 <- quantile(column, 0.75, na.rm = TRUE)
+  IQR <- Q3 - Q1
+  lower_bound <- Q1 - 1.5 * IQR
+  upper_bound <- Q3 + 1.5 * IQR
+  column <- ifelse(column < lower_bound | column > upper_bound, 
+                   median(column, na.rm = TRUE), 
+                   column)
+  return(column)}
+```
+- -------------Data filtration--------------
+```{r}
+GPA <- 
+  as.numeric(Study_Habits$GPA)
+GPA <- 
+  outliers(GPA)
+Homework_time <- 
+  as.numeric(Study_Habits$`Homework's time`)
+Studying_hours <- 
+  as.numeric(Study_Habits$`Studying hours`)
+Studying_hours <- 
+  outliers(Studying_hours)
+Age <- 
+  as.numeric(Study_Habits$Age)
+Age <-
+  outliers(Age)
+Method <- sapply(strsplit(Study_Habits$`Studying Methods`, ";"), length)
+original_levels <- c("Watching educational videos", "Rewriting notes", "Group study", "Flashcards", "Reading textbooks")
+Method <- as.factor(Method)
+levels(Method) <- original_levels
+```
+- -------------Statistical Analysis--------------
+- # Confidence interval calculation 
+- We will use: CI = sample mean ± margin of error
+- We will calculate the confidence interval with a 95% confidence level
+```{r}
+n = length(Age)
+# 1- 95% Confidence Interval for GPA
+confidence_level <- 0.95
+z_value <- qnorm(1 - (1 - confidence_level) / 2)  # z=1.96 for 95% CI
+
+# Calculate margin of error
+margin_of_error <- z_value * (sd(Age) / sqrt(n))
+margin_of_error
+# Calculate confidence interval
+CI_lower <- mean(Age) - margin_of_error
+CI_upper <- mean(Age) + margin_of_error
+
+CI_lower
+CI_upper
+```
+- This means we are 95% confident that the true population mean Age according to our sample lies between **18.19792** and **18.39337**.
+- The margin of error is 0.15
+```{r}
+n = length(Homework_time)
+# 1- 95% Confidence Interval for GPA
+confidence_level <- 0.95
+z_value <- qnorm(1 - (1 - confidence_level) / 2)  # z=1.96 for 95% CI
+
+# Calculate margin of error
+margin_of_error <- z_value * (sd(Homework_time) / sqrt(n))
+margin_of_error
+# Calculate confidence interval
+CI_lower <- mean(Homework_time) - margin_of_error
+CI_upper <- mean(Homework_time) + margin_of_error
+
+CI_lower
+CI_upper
+```
+- This means we are 95% confident that the true population mean Homework's time according to our sample lies between **8.249643** and **13.17893**.
+- The margin of error is 2.46, which is a big number because the variation on the responses we collected
+```{r}
+n = length(Studying_hours)
+# 1- 95% Confidence Interval for GPA
+confidence_level <- 0.95
+z_value <- qnorm(1 - (1 - confidence_level) / 2)  # z=1.96 for 95% CI
+
+# Calculate margin of error
+margin_of_error <- z_value * (sd(Studying_hours) / sqrt(n))
+margin_of_error
+# Calculate confidence interval
+CI_lower <- mean(Studying_hours) - margin_of_error
+CI_upper <- mean(Studying_hours) + margin_of_error
+
+CI_lower
+CI_upper
+```
+- This means we are 95% confident that the true population mean Studying hours according to our sample lies between **18.94999** and **24.81624**.
+- The margin of error is 2.9, which is a big number because the variation on the responses we collected
+- # Hypothesis Testing
+- **#GPA vs Gender**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  X = Study_Habits$Gender,
+  Y = GPA
+)
+male_data <- custom_data[custom_data$Gender == "Male", ]
+female_data <- custom_data[custom_data$Gender == "Female", ]
+
+# Create side-by-side bar plots
+ggplot(custom_data, aes(x = X, y = Y, fill = X)) +
+  geom_boxplot() +
+  labs(title = "GPA Distribution by Gender",
+       x = "Gender",
+       y = "GPA") +
+  theme_minimal()
+
+```
+
+- --Hypothesis testing using Regression Analysis--
+```{r}
+model <- lm(Y ~ X, data = custom_data)
+summary(model)
+```
+- high p-value (greater than 0.05) indicates that the effect of Gender on GPA is not statistically significant. Thus, there’s no evidence that gender has a meaningful impact on GPA in our dataset.
+- **#GPA vs Fathers’ Education Level**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  Father = Study_Habits$`Parents Education Level`,
+  GPA = GPA,
+  Y = Study_Habits$Gender
+)
+ggplot(custom_data, aes(x = Father, y = GPA, color = Y)) +
+  geom_point(alpha = 0.6) + 
+  geom_smooth(method = "lm", col = "blue", se = FALSE) +  
+  facet_wrap(~ Study_Habits$Gender) +
+  labs(title = "GPA vs. Fathers’ Education Level",
+       x = "Fathers’ Education Level",
+       y = "GPA",
+       color = "Gender") +
+  theme(axis.text.x = element_text(size = 10, angle = 45, hjust = 1))  # Adjust x-axis text properties
+```
+
+- --Hypothesis testing using Regression Analysis--
+```{r}
+model <- lm(GPA ~ Father, data = custom_data)
+summary(model)
+```
+- high p-value (greater than 0.05) indicates that the effect of Fathers’ Education Level on GPA is not statistically significant. Thus, there’s no evidence that Fathers’ Education Level has a meaningful impact on GPA in our dataset.
+- **#GPA vs Mothers’ Education Level**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  Mother = Study_Habits$`Parents Education Level2`,
+  GPA = GPA,
+  Y = Study_Habits$Gender
+)
+ggplot(custom_data, aes(x = Mother, y = GPA, color = Y)) +
+  geom_point(alpha = 0.6) + 
+  geom_smooth(method = "lm", col = "blue", se = FALSE) +
+  facet_wrap(~ Study_Habits$Gender) +
+  labs(title = "GPA vs. Mothers’ Education Level ",
+       x = "Mothers’ Education Level",
+       y = "GPA",
+       color = "Gender")+
+  theme(axis.text.x = element_text(size = 10, angle = 45, hjust = 1))  # Adjust x-axis text properties
+```
+
+- --Hypothesis testing using Regression Analysis--
+```{r}
+model <- lm(GPA ~ Mother, data = custom_data)
+summary(model)
+```
+- high p-value (greater than 0.05) indicates that the effect of Mothers’ Education Level on GPA is not statistically significant. Thus, there’s no evidence that Mothers’ Education Level has a meaningful impact on GPA in our dataset.
+- **#GPA vs Family Structure**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  Fam = Study_Habits$`Family Structure`,
+  GPA = GPA
+)
+ggplot(custom_data, aes(x = Fam, y = GPA, color = Study_Habits$Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue") +
+  facet_wrap(~ Study_Habits$Gender) +
+  labs(title = "GPA vs. Family Structure ",
+       x = "Family Structure",
+       y = "GPA")+
+  theme(axis.text.x = element_text(size = 10, angle = 45, hjust = 1))  # Adjust x-axis text properties
+```
+
+- --Hypothesis testing using Regression Analysis--
+```{r}
+model <- lm(GPA ~ Fam, data = custom_data)
+summary(model)
+```
+- high p-value (greater than 0.05) indicates that the effect of Family Structure on GPA is not statistically significant. Thus, there’s no evidence that Family Structure has a meaningful impact on GPA in our dataset.
+- **#GPA vs Lifestyle Factors**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  Life = Study_Habits$`  Lifestyle Factors (Urban vs. Rural Living)`,
+  GPA = GPA
+)
+ggplot(custom_data, aes(x = Life, y = GPA, color = Study_Habits$Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue") +
+  facet_wrap(~ Study_Habits$Gender) +
+  labs(title = "GPA vs. Lifestyle Factors ",
+       x = "Lifestyle Factors",
+       y = "GPA")
+```
+
+- --Hypothesis testing using Regression Analysis--
+```{r}
+model <- lm(GPA ~ Life, data = custom_data)
+summary(model)
+```
+- high p-value (greater than 0.05) indicates that the effect of Lifestyle Factors on GPA is not statistically significant. Thus, there’s no evidence that Lifestyle Factors has a meaningful impact on GPA in our dataset.
+- **#GPA vs Digital Access**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  Dig = Study_Habits$`Digital Access`,
+  GPA = GPA
+)
+ggplot(custom_data, aes(x = Dig, y = GPA, color = Study_Habits$Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue") +
+  facet_wrap(~ Study_Habits$Gender) +
+  labs(title = "GPA vs. Digital Access ",
+       x = "Digital Access",
+       y = "GPA")+
+  theme(axis.text.x = element_text(size = 10, angle = 45, hjust = 1))  # Adjust x-axis text properties
+```
+
+- --Hypothesis testing using Regression Analysis--
+```{r}
+model <- lm(GPA ~ Dig, data = custom_data)
+summary(model)
+```
+- high p-value (greater than 0.05) indicates that the effect of Digital Access on GPA is not statistically significant. Thus, there’s no evidence that Digital Access has a meaningful impact on GPA in our dataset.
+- **#GPA vs Study Environment**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  Env = Study_Habits$`Study Environment`,
+  GPA = GPA
+)
+ggplot(custom_data, aes(x = Env, y = GPA, color = Study_Habits$Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue") +
+  facet_wrap(~ Study_Habits$Gender) +
+  labs(title = "GPA vs. Study Environment ",
+       x = "Study Environment",
+       y = "GPA")
+```
+
+- --Hypothesis testing using Regression Analysis--
+```{r}
+model <- lm(GPA ~ Env, data = custom_data)
+summary(model)
+```
+high p-value (greater than 0.05) indicates that the effect of Fathers’ Education Level on GPA is not statistically significant. Thus, there’s no evidence that Fathers’ Education Level has a meaningful impact on GPA in our dataset.
+- **#GPA vs Studying Methods**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  Method = Method,
+  GPA = GPA
+)
+ggplot(custom_data, aes(x = Method, y = GPA, color = Study_Habits$Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue") +
+  facet_wrap(~ Study_Habits$Gender) +
+  labs(title = "GPA vs. Studying Methods ",
+       x = "Studying Methods",
+       y = "GPA")+
+  theme(axis.text.x = element_text(size = 10, angle = 45, hjust = 1))  
+```
+- --Hypothesis testing using Regression Analysis--
+```{r}
+model <- lm(GPA ~ Method, data = custom_data)
+summary(model)
+```
+- high p-value (greater than 0.05) indicates that the effect of Studying Methods on GPA is not statistically significant. Thus, there’s no evidence that Studying Methods has a meaningful impact on GPA in our dataset.
+- **#GPA vs Taking Notes**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  Notes = Study_Habits$`Taking Notes`,
+  GPA = GPA
+)
+ggplot(custom_data, aes(x = Notes, y = GPA, color = Study_Habits$Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue") +
+  facet_wrap(~ Study_Habits$Gender) +
+  labs(title = "GPA vs. Taking Notes ",
+       x = "Taking Notes",
+       y = "GPA")
+```
+
+- --Hypothesis testing using Regression Analysis--
+```{r}
+model <- lm(GPA ~ Notes, data = custom_data)
+summary(model)
+```
+- high p-value (greater than 0.05) indicates that the effect of Taking Notes on GPA is not statistically significant. Thus, there’s no evidence that Taking Notes has a meaningful impact on GPA in our dataset.
+- **#GPA vs Reviewing Notes**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  Review = Study_Habits$`Reviewing Notes`,
+  GPA = GPA
+)
+ggplot(custom_data, aes(x = Review, y = GPA, color = Study_Habits$Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue") +
+  facet_wrap(~ Study_Habits$Gender) +
+  labs(title = "GPA vs. Reviewing Notes ",
+       x = "Reviewing Notes",
+       y = "GPA")
+```
+
+- --Hypothesis testing using Regression Analysis--
+```{r}
+model <- lm(GPA ~ Review, data = custom_data)
+summary(model)
+```
+- Appropriate p-value (lower than 0.05) indicates that the effect of Reviewing Notes on GPA is statistically significant. Thus, there’s enough evidence that Reviewing Notes has a meaningful impact on GPA in our dataset.
+- **#GPA vs Organized material**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  Organized = Study_Habits$`Organized material`,
+  GPA = GPA
+)
+ggplot(custom_data, aes(x = Organized, y = GPA, color = Study_Habits$Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue") +
+  facet_wrap(~ Study_Habits$Gender) +
+  labs(title = "GPA vs. Organized material ",
+       x = "Organized material",
+       y = "GPA")+
+  theme(axis.text.x = element_text(size = 10, angle = 45, hjust = 1))  # Adjust x-axis text properties
+```
+
+- --Hypothesis testing using Regression Analysis--
+```{r}
+model <- lm(GPA ~ Organized, data = custom_data)
+summary(model)
+```
+- high p-value (greater than 0.05) indicates that the effect of Organized material on GPA is not statistically significant. Thus, there’s no evidence that Organized material has a meaningful impact on GPA in our dataset.
+- **#GPA vs Homework's time**
+- --Visualization--
+```{r}
+custom_data <- na.omit(data.frame(
+  Time = as.numeric(Study_Habits$`Homework's time`),
+  GPA = as.numeric(GPA),
+  Family_Structure = Study_Habits$`Family Structure`,
+  color = Study_Habits$Gender
+))
+
+ggplot(custom_data, aes(y = GPA, x = Time, color = color)) +
+  geom_point(alpha = 0.6) + 
+  geom_smooth(method = "lm", col = "red", se = FALSE) + 
+  facet_wrap(~ Family_Structure) + 
+  labs(title = "Relationship Between GPA and Homework's Time",
+       x = "Homework's Time",
+       y = "GPA") +
+  theme_minimal()
+```
+```{r}
+custom_data <- na.omit(data.frame(
+  Time = as.numeric(Study_Habits$`Homework's time`),
+  GPA = as.numeric(GPA),
+  Dig = Study_Habits$`Digital Access`,
+  color = Study_Habits$Gender
+))
+
+ggplot(custom_data, aes(y = GPA, x = Time, color = color)) +
+  geom_point(alpha = 0.6) + 
+  geom_smooth(method = "lm", col = "red", se = FALSE) + 
+  facet_wrap(~ Dig) + 
+  labs(title = "Relationship Between GPA and Homework's Time",
+       x = "Homework's Time",
+       y = "GPA") +
+  theme_minimal()
+```
+
+- --Hypothesis testing using Regression Analysis--
+```{r}
+model <- lm(GPA ~ Time, data = custom_data)
+summary(model)
+```
+- high p-value (greater than 0.05) indicates that the effect of Homework's time on GPA is not statistically significant. Thus, there’s no evidence that Homework's time has a meaningful impact on GPA in our dataset.
+- **#GPA vs Planning for study Sessions**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  Plan = Study_Habits$`Planning for study Sessions`,
+  GPA = GPA
+)
+ggplot(custom_data, aes(x = Plan, y = GPA, color = Study_Habits$Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue") +
+  facet_wrap(~ Study_Habits$Gender) + 
+  labs(title = "GPA vs. Planning for study Sessions ",
+       x = "Planning for study Sessions",
+       y = "GPA")
+```
+
+- --Hypothesis testing using Regression Analysis--
+```{r}
+model <- lm(GPA ~ Plan, data = custom_data)
+summary(model)
+```
+- high p-value (greater than 0.05) indicates that the effect of Planning for study Sessions on GPA is not statistically significant. Thus, there’s no evidence that Planning for study Sessions has a meaningful impact on GPA in our dataset.
+- **#GPA vs Exam Preparation**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  Prep = Study_Habits$`Exam Preparation`,
+  GPA = GPA
+)
+ggplot(custom_data, aes(x = Prep, y = GPA, color = Study_Habits$Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue") +
+  facet_wrap(~ Study_Habits$Gender) +
+  labs(title = "GPA vs. Exam Preparation ",
+       x = "Exam Preparation",
+       y = "GPA")
+```
+
+- --Hypothesis testing using Regression Analysis--
+```{r}
+model <- lm(GPA ~ Prep, data = custom_data)
+summary(model)
+```
+- high p-value (greater than 0.05) indicates that the effect of Exam Preparation on GPA is not statistically significant. Thus, there’s no evidence that Exam Preparation has a meaningful impact on GPA in our dataset.
+- **#GPA vs Taking Notes**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  Notes = Study_Habits$`Taking Notes`,
+  GPA = GPA
+)
+ggplot(custom_data, aes(x = Notes, y = GPA, color = Study_Habits$Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue") +
+  facet_wrap(~ Study_Habits$Gender) +
+  labs(title = "GPA vs. Taking Notes ",
+       x = "Taking Notes",
+       y = "GPA")
+```
+
+- --Hypothesis testing using Regression Analysis--
+```{r}
+model <- lm(GPA ~ Notes, data = custom_data)
+summary(model)
+```
+- high p-value (greater than 0.05) indicates that the effect of Taking Notes on GPA is not statistically significant. Thus, there’s no evidence that Taking Notes has a meaningful impact on GPA in our dataset.
+- **#GPA vs Seek academic help**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  Help = Study_Habits$`Seek academic help`,
+  GPA = GPA
+)
+ggplot(custom_data, aes(x = Help, y = GPA, color = Study_Habits$Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue") +
+  facet_wrap(~ Study_Habits$Gender) +
+  labs(title = "GPA vs. Seek academic help ",
+       x = "Seek academic help",
+       y = "GPA")
+```
+
+- --Hypothesis testing using Regression Analysis--
+```{r}
+model <- lm(GPA ~ Help, data = custom_data)
+summary(model)
+```
+- high p-value (greater than 0.05) indicates that the effect of Seek academic help on GPA is not statistically significant. Thus, there’s no evidence that Seek academic help has a meaningful impact on GPA in our dataset.
+- **#GPA vs Confidence in Academic success**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  Success = Study_Habits$`Confidence in Academic success`,
+  GPA = GPA
+)
+ggplot(custom_data, aes(x = Success, y = GPA, color = Study_Habits$Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue") +
+  facet_wrap(~ Study_Habits$Gender) +
+  labs(title = "GPA vs. Confidence in Academic success",
+       x = "Confidence in Academic success",
+       y = "GPA")+
+  theme(axis.text.x = element_text(size = 10, angle = 45, hjust = 1))  # Adjust x-axis text properties
+```
+
+- --Hypothesis testing using Regression Analysis--
+```{r}
+model <- lm(GPA ~ Success, data = custom_data)
+summary(model)
+```
+- high p-value (greater than 0.05) indicates that the effect of Confidence in Academic success on GPA is not statistically significant. Thus, there’s no evidence that Confidence in Academic success has a meaningful impact on GPA in our dataset.
+- **#GPA vs Study Habits Impact**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  Impact = Study_Habits$`Study Habits Impact`,
+  GPA = GPA
+)
+ggplot(custom_data, aes(x = Impact, y = GPA, color = Study_Habits$Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue") +
+  facet_wrap(~ Study_Habits$Gender) +
+  labs(title = "GPA vs. Study Habits Impact ",
+       x = "Study Habits Impact",
+       y = "GPA")+
+  theme(axis.text.x = element_text(size = 10, angle = 45, hjust = 1))  # Adjust x-axis text properties
+```
+
+- --Hypothesis testing using Regression Analysis--
+```{r}
+model <- lm(GPA ~ Impact, data = custom_data)
+summary(model)
+```
+- high p-value (greater than 0.05) indicates that the effect of Study Habits Impact on GPA is not statistically significant. Thus, there’s no evidence that Study Habits Impact has a meaningful impact on GPA in our dataset.
+- **#GPA vs Studying hours**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  Hours = Studying_hours,
+  GPA = GPA,
+  color = Study_Habits$Gender
+)
+
+ggplot(custom_data, aes(y = GPA, x = Hours, color = color)) +
+  geom_point(alpha = 0.6) + 
+  geom_smooth(method = "lm", col = "red", se = FALSE) + 
+  facet_wrap(~ Study_Habits$`Family Structure`) + 
+  labs(title = "Relationship Between GPA and Studying hours",
+       x = "Studying hours",
+       y = "GPA") +
+  theme_minimal()
+```
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  Hours = Studying_hours,
+  GPA = GPA,
+  color = Study_Habits$Gender
+)
+
+ggplot(custom_data, aes(y = GPA, x = Hours, color = color)) +
+  geom_point(alpha = 0.6) + 
+  geom_smooth(method = "lm", col = "red", se = FALSE) + 
+  facet_wrap(~ Study_Habits$`Digital Access`) + 
+  labs(title = "Relationship Between GPA and Studying hours",
+       x = "Studying hours",
+       y = "GPA") +
+  theme_minimal()
+```
+
+- --Hypothesis testing using Regression Analysis--
+```{r}
+model <- lm(GPA ~ Hours, data = custom_data)
+summary(model)
+```
+- high p-value (greater than 0.05) indicates that the effect of Studying hours on GPA is not statistically significant. Thus, there’s no evidence that Studying hours has a meaningful impact on GPA in our dataset.
+- **#Digital Access vs Studying Methods**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Method,
+  V2 = Study_Habits$`Digital Access`
+)
+ggplot(custom_data, aes(x = V1, fill = V2)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Digital Access vs Studying Methods",
+       x = "Studying Methods",
+       y = "Count",
+       fill = "Digital Access") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+```
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Method, Study_Habits$`Digital Access`)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Digital Access on Studying Methods is not statistically significant. Thus, there’s no evidence that Digital Access has a meaningful impact on Studying Methods in our dataset.
+- **#Study Environment vs Studying Methods**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Method,
+  V2 = Study_Habits$`Study Environment`
+)
+ggplot(custom_data, aes(x = V1, fill = V2)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Study Environment vs Studying Methods ",
+       x = "Studying Methods",
+       fill = "Study Environment",
+       y = "count")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Method, Study_Habits$`Study Environment`)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Study Environment on Studying Methods is not statistically significant. Thus, there’s no evidence that Study Environment has a meaningful impact on Studying Methods in our dataset.
+- **#Taking Notes vs Studying Methods**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Method,
+  V2 = Study_Habits$`Taking Notes`
+)
+ggplot(custom_data, aes(x = V1, fill = V2)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Taking Notes vs Studying Methods ",
+       x = "Studying Methods",
+       fill = "Taking Notes",
+       y = "count")+
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Method, Study_Habits$`Taking Notes`)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Taking Notes on Studying Methods is not statistically significant. Thus, there’s no evidence that Taking Notes has a meaningful impact on Studying Methods in our dataset.
+- **#Organized Material vs Studying Methods**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Method,
+  V2 = Study_Habits$`Organized material`
+)
+ggplot(custom_data, aes(x = V1, fill = V2)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Organized Material vs Studying Methods ",
+       x = "Studying Methods",
+       fill = "Organized Material",
+       y = "count")+
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Method, Study_Habits$`Organized material`)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Organized Material on Studying Methods is not statistically significant. Thus, there’s no evidence that Organized Material has a meaningful impact on Studying Methods in our dataset.
+- **#Homework's time vs Studying Methods**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Method,
+  V2 = Study_Habits$`Homework's time`
+)
+ggplot(custom_data, aes(x = V1, y = V2, color = Study_Habits$Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue") +
+  facet_wrap(~ Study_Habits$Gender) +
+  labs(title = "Homework's time vs Studying Methods ",
+       x = "Studying Methods",
+       y = "Homework's time")+
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Method, Study_Habits$`Homework's time`)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- Appropriate p-value (lower than 0.05) indicates that the effect of Studying Method on Homework's time is statistically significant. Thus, there’s enough evidence that Studying Method has a meaningful impact on Homework's time in our dataset.
+- **#Exam Preparation vs Studying Methods**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Method,
+  V2 = Study_Habits$`Exam Preparation`
+)
+ggplot(custom_data, aes(x = V1, fill = V2)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Exam Preparation vs Studying Methods ",
+       x = "Studying Methods",
+       fill = "Exam Preparation",
+       y = "count")+
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Method, Study_Habits$`Exam Preparation`)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Exam Preparation on Studying Methods is not statistically significant. Thus, there’s no evidence that Exam Preparation has a meaningful impact on Studying Methods in our dataset.
+- **#Confidence in Academic success vs Studying Methods**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Method,
+  V2 = Study_Habits$`Confidence in Academic success`
+)
+ggplot(custom_data, aes(x = V1, fill = V2)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Confidence in Academic success vs Studying Methods ",
+       x = "Studying Methods",
+       fill = "Confidence in Academic success",
+       y = "count")+
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Method, Study_Habits$`Confidence in Academic success`)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Confidence in Academic success on Studying Methods is not statistically significant. Thus, there’s no evidence that Confidence in Academic success has a meaningful impact on Studying Methods in our dataset.
+- **#Study Habits Impact vs Studying Methods**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Method,
+  V2 = Study_Habits$`Study Habits Impact`
+)
+ggplot(custom_data, aes(x = V1, fill = V2)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Study Habits Impact vs Studying Methods ",
+       x = "Studying Methods",
+       fill = "Study Habits Impact",
+       y = "count")+
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Method, Study_Habits$`Study Habits Impact`)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Study Habits Impact on Studying Methods is not statistically significant. Thus, there’s no evidence that Digital Access has a meaningful impact on Studying Methods in our dataset.
+- **#Studying hours vs Studying Methods**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Method,
+  V2 = Study_Habits$`Studying hours`
+)
+ggplot(custom_data, aes(x = V1, y = V2, color = Study_Habits$Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue") +
+  facet_wrap(~ Study_Habits$Gender) +
+  labs(title = "Studying hours vs Studying Methods ",
+       x = "Studying Methods",
+       y = "Studying hours")+
+    theme(axis.text.x = element_text(size = 10, angle = 45, hjust = 1))  # Adjust x-axis text properties
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Method, Study_Habits$`Studying hours`)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Studying hours on Studying Methods is not statistically significant. Thus, there’s no evidence that Studying hours has a meaningful impact on Studying Methods in our dataset.
+- **#Taking Notes vs Gender**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Study_Habits$`Taking Notes`,
+  V2 = Study_Habits$Gender
+)
+ggplot(custom_data, aes(x = V1, fill = V2)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gender vs Taking Notes ",
+       x = "Taking Notes",
+       fill = "Gender",
+       y = "count")
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Study_Habits$`Taking Notes`, Study_Habits$Gender)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Gender on Taking Notes is not statistically significant. Thus, there’s no evidence that Gender has a meaningful impact on Taking Notes in our dataset
+- **#Reviewing Notes vs Gender**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Study_Habits$`Reviewing Notes`,
+  V2 = Study_Habits$Gender
+)
+ggplot(custom_data, aes(x = V2, fill = V1)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gender vs Reviewing Notes ",
+       fill = "Reviewing Notes",
+       x = "Gender",
+       y = "count")
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Study_Habits$`Reviewing Notes`, Study_Habits$Gender)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Gender on Reviewing Notes is not statistically significant. Thus, there’s no evidence that Gender has a meaningful impact on Reviewing Notes in our dataset
+- **#Organized Material vs Gender**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Study_Habits$`Organized material`,
+  V2 = Study_Habits$Gender
+)
+ggplot(custom_data, aes(x = V2, fill = V1)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gender vs Organized Material ",
+       fill = "Organized Material",
+       x = "Gender",
+       y = "count")
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Study_Habits$`Organized material`, Study_Habits$Gender)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Gender on Organized Material is not statistically significant. Thus, there’s no evidence that Gender has a meaningful impact on Organized Material in our dataset
+- **#Homework Time vs Gender**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Study_Habits$`Homework's time`,
+  V2 = Study_Habits$Gender
+)
+ggplot(custom_data, aes(x = V2, y = V1, color = Study_Habits$Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue") +
+  labs(title = "Gender vs Homework Time ",
+       x = "Gender",
+       y = "Homework Time")
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Study_Habits$`Homework's time`, Study_Habits$Gender)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Gender on Homework Time is not statistically significant. Thus, there’s no evidence that Gender has a meaningful impact on Homework Time in our dataset
+- **#Planning for study Sessions vs Gender**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Study_Habits$`Planning for study Sessions`,
+  V2 = Study_Habits$Gender
+)
+ggplot(custom_data, aes(x = V2, fill = V1)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gender vs Planning for study Sessions ",
+       x = "Gender",
+       fill = "Planning for study Sessions",
+       y = "count")
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Study_Habits$`Planning for study Sessions`, Study_Habits$Gender)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Gender on Planning for study Sessions is not statistically significant. Thus, there’s no evidence that Gender has a meaningful impact on Planning for study Sessions in our dataset
+- **#Seek academic help vs Gender**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Study_Habits$`Seek academic help`,
+  V2 = Study_Habits$Gender
+)
+ggplot(custom_data, aes(x = V2, fill = V1)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gender vs Seek academic help ",
+       x = "Gender",
+       fill = "Seek academic help",
+       y = "count")
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Study_Habits$`Seek academic help`, Study_Habits$Gender)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Gender on Seek academic help is not statistically significant. Thus, there’s no evidence that Gender has a meaningful impact on Seek academic help in our dataset
+- **#Confidence in Academic success vs Gender**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Study_Habits$`Confidence in Academic success`,
+  V2 = Study_Habits$Gender
+)
+ggplot(custom_data, aes(x = V2, fill = V1)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gender vs Confidence in Academic success ",
+       x = "Gender",
+       fill = "Confidence in Academic success",
+       y = "count")
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Study_Habits$`Confidence in Academic success`, Study_Habits$Gender)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- Appropriate p-value (lower than 0.05) indicates that the effect of Gender on Confidence in Academic success is statistically significant. Thus, there’s enough evidence that Gender has a meaningful impact on Confidence in Academic success in our dataset.
+- **#Studying Hours vs Gender**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Study_Habits$`Studying hours`,
+  V2 = Study_Habits$Gender
+)
+ggplot(custom_data, aes(x = V2, y = V1, color = Study_Habits$Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue") +
+  labs(title = "Gender vs Studying Hours ",
+       x = "Gender",
+       y = "Studying Hours")
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Study_Habits$`Studying hours`, Study_Habits$Gender)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Gender on Studying Hours is not statistically significant. Thus, there’s no evidence that Gender has a meaningful impact on Taking Notes in our dataset
+- **#Taking Notes vs Organized Material**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Study_Habits$`Taking Notes`,
+  V2 = Study_Habits$`Organized material`
+)
+ggplot(custom_data, aes(x = V1, fill = V2)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Organized Material vs Taking Notes ",
+       x = "Taking Notes",
+       fill = "Organized Material",
+       y = "count")
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Study_Habits$`Taking Notes`, Study_Habits$`Organized material`)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Organized Material on Taking Notes is not statistically significant. Thus, there’s no evidence that Organized Material has a meaningful impact on Taking Notes in our dataset
+- **#Taking Notes vs Confidence in Academic success**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Study_Habits$`Confidence in Academic success`,
+  V2 = Study_Habits$`Taking Notes`
+)
+ggplot(custom_data, aes(x = V2, fill = V1)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Confidence in Academic success vs Taking Notes ",
+       fill = "Taking Notes",
+       x = "Confidence in Academic success",
+       y = "count")
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Study_Habits$`Taking Notes`, Study_Habits$`Confidence in Academic success`)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Confidence in Academic success on Taking Notes is not statistically significant. Thus, there’s no evidence that Confidence in Academic success has a meaningful impact on Taking Notes in our dataset
+- **#Taking Notes vs Studying hours**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Study_Habits$`Taking Notes`,
+  V2 = Study_Habits$`Studying hours`
+)
+ggplot(custom_data, aes(x = V1, y = V2, color = Study_Habits$Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue") +
+  facet_wrap(~ Study_Habits$Gender) +
+  labs(title = "Studying hours vs Taking Notes ",
+       x = "Taking Notes",
+       y = "Studying hours")
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Study_Habits$`Taking Notes`, Study_Habits$`Studying hours`)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Organized Material on Taking Notes is not statistically significant. Thus, there’s no evidence that Organized Material has a meaningful impact on Taking Notes in our dataset
+- **#Confidence in Academic success vs Studying hours**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Study_Habits$`Confidence in Academic success`,
+  V2 = Study_Habits$`Studying hours`
+)
+ggplot(custom_data, aes(x = V1, y = V2, color = Study_Habits$Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue") +
+  facet_wrap(~ Study_Habits$Gender) +
+  labs(title = "Studying hours vs Confidence in Academic success ",
+       x = "Confidence in Academic success",
+       y = "Studying hours")+
+    theme(axis.text.x = element_text(size = 10, angle = 45, hjust = 1))  # Adjust x-axis text properties
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Study_Habits$`Confidence in Academic success`, Study_Habits$`Studying hours`)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Studying hours on Confidence in Academic success is not statistically significant. Thus, there’s no evidence that Studying hours has a meaningful impact on Confidence in Academic success in our dataset
+- **#Confidence in Academic success vs Family Structure**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Study_Habits$`Confidence in Academic success`,
+  V2 = Study_Habits$`Family Structure`
+)
+ggplot(custom_data, aes(x = V2, fill = V1)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Family Structure vs Confidence in Academic success ",
+       fill = "Confidence in Academic success",
+       x = "Family Structure",
+       y = "count")+
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Study_Habits$`Confidence in Academic success`, Study_Habits$`Family Structure`)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Family Structure on Confidence in Academic success is not statistically significant. Thus, there’s no evidence that Family Structure has a meaningful impact on Confidence in Academic success in our dataset
+- **#Reviewing Notes vs Exam Preparation**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Study_Habits$`Reviewing Notes`,
+  V2 = Study_Habits$`Exam Preparation`
+)
+ggplot(custom_data, aes(x = V1, fill = V2)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Exam Preparation vs Reviewing Notes ",
+       x = "Reviewing Notes",
+       fill = "Exam Preparation",
+       y = "count")+
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Study_Habits$`Reviewing Notes`, Study_Habits$`Exam Preparation`)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Reviewing Notes on Exam Preparation is not statistically significant. Thus, there’s no evidence that Reviewing Notes has a meaningful impact on Exam Preparation in our dataset
+- **#Father Education vs Mother Education**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Study_Habits$`Parents Education Level`,
+  V2 = Study_Habits$`Parents Education Level2`
+)
+ggplot(custom_data, aes(x = V1, fill = V2)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Mother Education vs Father Education ",
+       x = "Father Education",
+       fill = "Mother Education",
+       y = "count")
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Study_Habits$`Parents Education Level`, Study_Habits$`Parents Education Level2`)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- Appropriate p-value (lower than 0.05) indicates that the effect of Father Education level on Mother Education Level is statistically significant. Thus, there’s enough evidence that Father Education level has a meaningful impact on Mother Education Level in our dataset.
+- **#Family Structure vs Lifestyle Factors**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Study_Habits$`  Lifestyle Factors (Urban vs. Rural Living)`,
+  V2 = Study_Habits$`Family Structure`
+)
+ggplot(custom_data, aes(x = V1, fill = V2)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Family Structur vs Lifestyle Factors ",
+       x = "Lifestyle Factors",
+       fill = "Family Structur",
+       y = "count")
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Study_Habits$`Family Structure`, Study_Habits$`  Lifestyle Factors (Urban vs. Rural Living)`)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Family Structure on Lifestyle Factors is not statistically significant. Thus, there’s no evidence that Family Structure has a meaningful impact on Lifestyle Factors in our dataset
+- **#Digital Access vs Lifestyle Factors**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Study_Habits$`  Lifestyle Factors (Urban vs. Rural Living)`,
+  V2 = Study_Habits$`Digital Access`
+)
+ggplot(custom_data, aes(x = V1, fill = V2)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Digital Access vs Lifestyle Factors ",
+       x = "Lifestyle Factors",
+       fill = "Digital Access",
+       y = "count")
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Study_Habits$`  Lifestyle Factors (Urban vs. Rural Living)`, Study_Habits$`Digital Access`)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Lifestyle Factors on Digital Access is not statistically significant. Thus, there’s no evidence that Lifestyle Factors has a meaningful impact on Digital Access in our dataset
+- **#Digital Access vs Study Environment**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Study_Habits$`Study Environment`,
+  V2 = Study_Habits$`Digital Access`
+)
+ggplot(custom_data, aes(x = V1, fill = V2)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Digital Access vs Study Environment ",
+       x = "Study Environment",
+       fill = "Digital Access",
+       y = "count")
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Study_Habits$`Study Environment`, Study_Habits$`Digital Access`)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Digital Access on Study Environment is not statistically significant. Thus, there’s no evidence that Digital Access has a meaningful impact on Study Environment in our dataset
+- **#Life Style vs Study Environment**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Study_Habits$`Study Environment`,
+  V2 = Study_Habits$`  Lifestyle Factors (Urban vs. Rural Living)`
+)
+ggplot(custom_data, aes(x = V1, fill = V2)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Life Style vs Study Environment ",
+       x = "Study Environment",
+       fill = "Life Style",
+       y = "count")
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Study_Habits$`Study Environment`, Study_Habits$`  Lifestyle Factors (Urban vs. Rural Living)`)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Life Style on Study Environment is not statistically significant. Thus, there’s no evidence that Life Style has a meaningful impact on Study Environment in our dataset
+- **#Family Structure vs Study Environment**
+- --Visualization--
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  V1 = Study_Habits$`Study Environment`,
+  V2 = Study_Habits$`Family Structure`
+)
+ggplot(custom_data, aes(x = V1, fill = V2)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Family Structure vs Study Environment ",
+       x = "Study Environment",
+       fill = "Family Structure",
+       y = "count")
+```
+
+- --Hypothesis testing using chi-squared test--
+```{r}
+contingency_table <- table(Study_Habits$`Study Environment`, Study_Habits$`Family Structure`)
+chi_squared_result <- chisq.test(contingency_table)
+print(chi_squared_result)
+```
+- high p-value (greater than 0.05) indicates that the effect of Family Structure on Study Environment is not statistically significant. Thus, there’s no evidence that Family Structure has a meaningful impact on Study Environment in our dataset
+
+
+- # Interpretation of the correlated variables
+### 1. GPA vs Reviewing Notes
+- The regression analysis revealed that reviewing notes is a significant predictor of GPA.
+- These findings suggest that the habit of reviewing notes, especially regularly, has a statistically significant but varying impact on academic performance.
+
+---
+
+### 2. Homework's Time vs Studying Methods
+- The chi-squared test indicates a significant association between the time spent on homework and preferred studying methods (\(X^2 = 146.48, df = 100, p = 0.0017\)). 
+- This suggests that students' studying methods strongly correlate with how much time they dedicate to homework, implying that tailored guidance on study strategies could optimize time management.
+
+---
+
+### 3. Confidence in Academic Success vs Gender
+- The chi-squared test showed a significant association between gender and confidence levels in academic success (\(X^2 = 11.299, df = 4, p = 0.0234\)). 
+- This finding highlights potential gender disparities in self-assessment of academic abilities, warranting initiatives to boost confidence among underrepresented groups.
+
+---
+
+### 4. Father's Education vs Mother's Education
+- A highly significant relationship was found between fathers' and mothers' education levels (\(X^2 = 56.33, df = 6, p < 0.001\)). 
+- This indicates that parental educational attainment is interrelated, reflecting socio-economic patterns that may influence students' educational experiences.
+
+- # Further analysis for GPA vs Reviewing Notes
+- Scatter plot with regrssion line:
+```{r}
+library(ggplot2)
+custom_data <- data.frame(
+  Review = Study_Habits$`Reviewing Notes`,
+  GPA = GPA
+)
+ggplot(custom_data, aes(x = Review, y = GPA, color = Study_Habits$Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  labs(title = "Scatter Plot of GPA vs Reviewing Notes",
+       x = "Reviewing Notes Frequency",
+       y = "GPA",
+       color = "Gender") +
+  theme_minimal()
+```
+
+- The regression line provides an indication of the overall trend in the data. It suggests that as the frequency of reviewing notes increases (from "Never" to "Always"), the GPA tends to increase as well.
+- Regression Equation:
+```{r}
+model <- lm(GPA ~ Review, data = custom_data)
+coefficients <- coef(model)
+equation <- paste0("GPA = ", round(coefficients[1], 3), " + ",
+                   round(coefficients[2], 3), "*Review_Level")
+equation
+
+```
+- This indicates that each increase in the review level (from "Never" to "Always") is associated with a 0.269 point increase in GPA.
+- Residuals and Diagnostics:
+- Residual plot
+```{r}
+plot(model, which = 1)
+```
+- The spread of residuals appears relatively constant across the fitted values, indicating that there is no obvious pattern in the residuals. This suggests that the assumption of constant variance (homoscedasticity) holds.
+- The red horizontal line at zero indicates that the average residual is close to zero, which suggests that the model is fitting the data well.
+- Normal Q-Q plot
+```{r}
+plot(model, which = 2)
+```
+- The points approximately follow the reference line, indicating that the residuals are normally distributed, which aligns with the assumptions of the linear regression model.
+- The summary statistics show that the model explains about 12.19% of the variance in GPA, with a residual standard error of 0.2018. The p-value for the regression model is 0.04994, which is less than 0.05, suggesting that the relationship between GPA and reviewing notes frequency is statistically significant.
+- Summary statistics:
+```{r}
+summary(model)
+```
+- R-squared and Adjusted R-squared:
+```{r}
+r_squared <- summary(model)$r.squared
+adjusted_r_squared <- summary(model)$adj.r.squared
+c(r_squared, adjusted_r_squared)
+```
+- R-squared: 0.1219 indicates that approximately 12.19% of the variation in GPA can be explained by the review frequency. This is a low value, suggesting that other factors not included in the model might be influencing GPA.
+- Adjusted R-squared: 0.07316 corrects the R-squared for the number of predictors in the model. The small increase compared to R-squared suggests some improvement in model fit, but it is still quite modest.
+- Group Comparisons:
+```{r}
+aggregate(GPA ~ Review, data = custom_data, FUN = mean)
+```
+- Comparing the average GPA across different review frequencies, we see the following:
+- "Never" has the highest average GPA (3.875).
+- "Often" comes next with an average GPA of 3.755.
+- "Rarely" and "Sometimes" have similar GPAs around 3.60 to 3.68.
+- This suggests that students who review their notes more frequently ("Never" and "Often") tend to have a higher GPA.
+- ANOVA: Check if differences in GPA between review groups are statistically significant:
+```{r}
+anova(model)
+```
+- The ANOVA results indicate that there is a significant difference in GPA across the different review groups, with an F-value of 2.4997 and a p-value of 0.04994. Since the p-value is less than 0.05, we reject the null hypothesis, suggesting that at least one group mean is significantly different from others.
+- Effect Size: Calculate eta squared to quantify effect size
+```{r}
+model <- lm(GPA ~ Review, data = custom_data)
+library(lsr)
+eta_squared <- etaSquared(model)
+eta_squared
+```
+- Eta squared of 0.1219398 quantifies the proportion of variance in GPA that is explained by review frequency. This indicates a small to moderate effect size. It suggests that review frequency accounts for a noticeable but not large part of the variation in GPA.
+
+- # Summary of the further analysis
+- Overall, these results suggest that the frequency of note reviewing is associated with GPA, indicating that students who review their notes less frequently tend to have higher GPAs. This outcome may be attributed to our sample consisting of students with high GPAs. According to Walck-Shannon, Rowell, and Frey (2021), students who rely heavily on reviewing notes often neglect more effective strategies, such as problem-solving and active recall, which can negatively impact their GPA.
+- # References:
+- Walck-Shannon, E. M., Rowell, S. F., & Frey, R. F. (2021). To What Extent Do Study Habits Relate to Performance?. CBE life sciences education, 20(1), ar6. https://doi.org/10.1187/cbe.20-05-0091

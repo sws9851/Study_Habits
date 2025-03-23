@@ -1,0 +1,605 @@
+---
+title: "Phase_1"
+author: "Samir Mohamed"
+date: "2025-2-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readxl)
+file_path <- "D:/Study_Habits/Study_Habits.xlsx"
+Study_Habits <- read_excel(file_path)
+# Define the function to find the statistical mode
+get_mode <- function(x) {
+  uniq_vals <- unique(x)
+  counts <- tabulate(match(x, uniq_vals))
+  if (length(unique(counts)) == 1) {
+    return("No mode")  # Return "No mode" if all values have the same frequency
+  }
+  uniq_vals[which.max(counts)]
+}
+```
+
+# Introduction
+The data was gathered from a comprehensive survey designed to explore the connection between students' study habits and their Grade Point Averages (GPA). This study aimed to analyze how different approaches to studying may influence academic performance, providing insights into effective strategies for achieving higher grades.
+
+# Data Structure
+```{r}
+str(Study_Habits)
+dim(Study_Habits)
+colnames(Study_Habits)
+```
+
+# Data Types
+ID: Quantitative, Nominal  
+Start time: Quantitative, Interval  
+Completion time: Quantitative, Interval  
+Email: Qualitative, Nominal  
+Name: Qualitative, Nominal  
+Gender: Qualitative, Nominal  
+Age: Quantitative, Ratio  
+Parents’ Education Level: Qualitative, Ordinal  
+Parents’ Education Level2: Qualitative, Ordinal  
+Family Structure: Qualitative, Nominal  
+Lifestyle Factors: Qualitative, Nominal  
+Digital Access: Qualitative, Ordinal  
+Study Environment: Qualitative, Nominal  
+Studying Methods: Qualitative, Nominal  
+Taking Notes: Qualitative, Ordinal  
+Reviewing Notes: Qualitative, Ordinal  
+Organized material: Qualitative, Ordinal  
+Homework's time: Quantitative, Ratio  
+Planning for study Sessions: Qualitative, Ordinal  
+Exam Preparation: Qualitative, Ordinal  
+Seek academic help: Qualitative, Ordinal  
+Confidence in Academic success: Qualitative, Ordinal  
+Study Habits Impact: Qualitative, Ordinal  
+GPA: Quantitative, Ratio  
+Studying hours: Quantitative, Ratio  
+
+# Variables' Measurements
+## Gender
+```{r}
+get_mode(Study_Habits$Gender)
+```
+It can be concluded that the number of males who participated in this survey is more than the females who participated.
+
+To make a bar chart for this variable, we have to change it to numeric data first.
+
+```{r}
+gender_counts <- table(Study_Habits$Gender)
+barplot(gender_counts, las = 2)
+```
+The graph shows that the portion of males is higher than females.
+
+## Age
+```{r}
+mean(Study_Habits$Age)
+```
+It returns NA because R deals with the age values as characters, not numbers. So, we have to convert it to numeric values first and then calculate the mean again.
+
+```{r}
+Age <- as.numeric(Study_Habits$Age)
+mean(Age)
+```
+It appears that the average age of all participants was `r mean(Age)`.
+
+```{r}
+get_mode(Age)
+```
+The most frequent value is `r get_mode(Age)` years old.
+
+```{r}
+median(Age)
+```
+This means that 50% of the participants are above `r median(Age)` and the other 50% are below it.
+
+### Variability Measures:
+```{r}
+range(Age)
+```
+It shows that the oldest participant is `r max(Age)` years old, and the youngest is `r min(Age)`, making the range = `r max(Age) - min(Age)`.
+
+```{r}
+IQR(Age)
+```
+The difference between the 75th percentile of the ages and the 25th percentile = `r IQR(Age)`.
+
+```{r}
+var(Age)
+```
+It appears that the variability between the data is `r var(Age)` years².
+
+```{r}
+sd(Age)
+```
+It shows that 68% of the data lies between `r mean(Age) + sd(Age)` and `r mean(Age) - sd(Age)`.
+
+```{r}
+hist(Age, main = "Histogram of Age")
+```
+The graph shows that the distribution is skewed to the left.
+
+```{r}
+boxplot(Age, main = "Box Plot of Age")
+```
+The box plot shows that we have outliers at 16 and 15. So, we have to remove them.
+
+### Remove Outliers Based on IQR
+```{r}
+Study_Habits$Age <- 
+  as.numeric(Study_Habits$Age)
+Q1 <- quantile(Age, 0.25)
+Q3 <- quantile(Age, 0.75)
+IQR_value <- Q3 - Q1
+lower_bound <- Q1 - 1.5 * IQR_value
+upper_bound <- Q3 + 1.5 * IQR_value
+filtered_study_habits <- Study_Habits[Study_Habits$Age >= lower_bound & Study_Habits$Age <= upper_bound, ]
+```
+
+```{r}
+boxplot(filtered_study_habits$Age, main = "Box Plot of Age (Outliers Removed)")
+```
+
+...
+
+## Parent's Education Level
+```{r}
+get_mode(Study_Habits$`Parents Education Level`)
+```
+The most frequent value is "University degree or higher". This shows that the majority of participants have fathers who have a university degree or higher.
+
+To calculate the median, we need to convert the data to an ordered factor.
+
+```{r}
+Study_Habits$`Parents Education Level` <- factor(
+  Study_Habits$`Parents Education Level`,
+  levels = c("No formal education", "Primary school", "Secondary school", "University degree or higher"),
+  ordered = TRUE
+)
+numeric_parents_education <- as.numeric(Study_Habits$`Parents Education Level`)
+median(numeric_parents_education, na.rm = TRUE)
+```
+
+```{r}
+father_education_counts <- table(Study_Habits$`Parents Education Level`)
+barplot(father_education_counts, las = 2)
+```
+
+...
+
+## Study Environment
+```{r}
+get_mode(Study_Habits$`Study Environment`)
+```
+We can conclude that the majority of participants in this survey prefer studying at home.
+
+```{r}
+study_counts <- table(Study_Habits$`Study Environment`)
+barplot(study_counts, las = 2)
+```
+The graph shows that the portion of people who study at home is the highest.
+---
+title: "Study Habits Analysis"
+output: html_document
+---
+
+## Studying Methods
+```{r}
+get_mode(Study_Habits$`Studying Methods`)
+```
+We can conclude that the majority of participants in this survey prefer watching educational videos to study.
+
+```{r}
+methods_list <- unlist(strsplit(as.character(Study_Habits$`Studying Methods`), split = ";"))
+methods_list <- trimws(methods_list)
+method_counts <- table(methods_list)
+barplot(method_counts, las = 2)
+```
+The graph shows that the portion of people who watch educational videos to study is the highest.
+
+## Taking Notes
+```{r}
+get_mode(Study_Habits$`Taking Notes`)
+```
+The most frequent value is "Sometimes". This shows that the majority of participants sometimes take notes.
+
+```{r}
+median(Study_Habits$`Taking Notes`)
+```
+This means that 50% of the participants chose "Sometimes" or higher, and the other 50% chose it or lower.
+### Variability Measures:
+```{r}
+range(Study_Habits$`Taking Notes`)
+```
+It shows that the highest one chose "Sometimes", and the lowest was "Never".
+```{r}
+notes_counts <- table(Study_Habits$`Taking Notes`)
+barplot(notes_counts, las = 2)
+```
+The graph shows that all participants either take notes sometimes or never.
+
+##Reviewing Notes
+
+```{r}
+get_mode(Study_Habits$`Reviewing Notes`)
+```
+The most frequent value is "Sometimes". This shows that the majority of participants sometimes review their notes.
+
+```{r}
+median(Study_Habits$`Reviewing Notes`)
+```
+This means that 50% of the participants review their notes more frequently than "Rarely", and the other 50% review them less frequently.
+
+### Variability Measures:
+```{r}
+range(Study_Habits$`Reviewing Notes`)
+```
+It shows that the most frequent one chose "Always", and the least frequent chose "Sometimes".
+```{r}
+review_counts <- table(Study_Habits$`Reviewing Notes`)
+barplot(review_counts, las = 2)
+```
+The graph shows that the highest portion of participants sometimes review their notes.
+
+## Organized Material
+
+```{r}
+get_mode(Study_Habits$`Organized material`)
+```
+The most frequent value is "Somewhat organized". This shows that the majority of participants are somewhat organized.
+
+```{r}
+median(Study_Habits$`Organized material`)
+```
+This means that 50% of the participants are more organized than "Somewhat organized", and the other 50% are less organized.
+
+### Variability Measures:
+```{r}
+range(Study_Habits$`Organized material`)
+```
+It shows that the most organized one chose "Very organized", and the least one chose "Neutral".
+```{r}
+material_counts <- table(Study_Habits$`Organized material`)
+barplot(material_counts, las = 2)
+```
+The graph shows that the highest portion of participants are somewhat organized.
+
+## Homework's Time
+
+```{r}
+# Calculate mean
+mean(Study_Habits$`Homework's time`)
+```
+It returns NA because R is dealing with the homework's time values as characters, not numbers. So, we have to convert it to numeric values first and then calculate the mean again.
+
+```{r}
+# Convert to numeric and recalculate mean
+Study_Habits$`Homework's time` <- as.numeric(Study_Habits$`Homework's time`)
+mean(Study_Habits$`Homework's time`)
+```
+It appears that the average of the Hours per week spent doing homework by participants is 10.714
+```{r}
+# Calculate mode
+get_mode(Study_Habits$`Homework's time`)
+```
+The most frequent value is 3, showing that the most repeated number of hours spent doing homework per week is 3 hours
+```{r}
+# Calculate median
+median(Study_Habits$`Homework's time`)
+```
+This means that 50% of the participants spent more than 7 hours doing their homework per week and the other 50% less than 7.
+
+### Variability Measures:
+
+```{r}
+# Calculate range
+range(Study_Habits$`Homework's time`)
+```
+it shows that the lowest one spend 0 hours doing their homework, and the highest one spends 67
+
+```{r}
+# Calculate IQR
+IQR(Study_Habits$`Homework's time`)
+```
+The difference between the 75th percentile of the homework hours and the 25th percentile = 8
+
+```{r}
+# Calculate variance
+var(Study_Habits$`Homework's time`)
+```
+It appears that the variability between the data is 121.7 hours^2
+
+```{r}
+# Calculate standard deviation
+sd(Study_Habits$`Homework's time`)
+```
+It shows that 68% of the data lies between 21.73 and -1.67
+
+## Planning for Study Sessions
+
+```{r}
+# Calculate mode
+get_mode(Study_Habits$`Planning for study Sessions`)
+```
+The most frequent value is "Often". This shows that the majority of participants often plan for their study sessions.
+
+```{r}
+# Calculate median
+median(Study_Habits$`Planning for study Sessions`)
+```
+This means that 50% of the participants plan more than "Often" for their study sessions, and the other 50% plan less.
+
+### Variability Measures:
+
+```{r}
+# Calculate range
+range(Study_Habits$`Planning for study Sessions`)
+```
+It shows that the most planning one chose "Always", and the least one chose "Sometimes".
+
+As this variable is not numerical, we cannot calculate the IQR.
+
+```{r}
+# Create bar plot
+planning_counts <- table(Study_Habits$`Planning for study Sessions`)
+barplot(planning_counts, las = 2)
+```
+The graph shows that the highest portion of participants often plan for their study sessions.
+
+## Exam Preparation
+
+```{r}
+# Calculate mode
+get_mode(Study_Habits$`Exam Preparation`)
+```
+The most frequent value is "Often". This shows that the majority of participants often feel prepared before the exam.
+
+```{r}
+# Calculate median
+median(Study_Habits$`Exam Preparation`)
+```
+This means that 50% of the participants feel prepared more than "Often", and the other 50% feel less.
+
+### Variability Measures:
+
+```{r}
+# Calculate range
+range(Study_Habits$`Exam Preparation`)
+```
+It shows that the most confident one chose "Always", and the least one chose "Sometimes".
+
+As this variable is not numerical, we cannot calculate the IQR.
+
+```{r}
+# Create bar plot
+exam_counts <- table(Study_Habits$`Exam Preparation`)
+barplot(exam_counts, las = 2)
+```
+The graph shows that the highest portion of participants often feel prepared before the exam.
+
+## Seek Academic Help
+```{r}
+get_mode(Study_Habits$`Seek academic help`)
+```
+The most frequent value is "Sometimes". This shows that the majority of participants sometimes seek academic help.
+
+```{r}
+median(Study_Habits$`Seek academic help`)
+```
+This means that 50% of the participants seek academic help less frequently than "Rarely", and the other 50% seek more frequently.
+
+### Variability Measures:
+```{r}
+range(Study_Habits$`Seek academic help`)
+```
+It shows that the most frequent one seeking academic help chose "Always", and the least one chose "Sometimes".
+
+As this variable is not numerical, we cannot calculate the IQR.
+
+```{r}
+help_counts <- table(Study_Habits$`Seek academic help`)
+barplot(help_counts, las = 2)
+```
+The graph shows that the highest portion of participants often seek academic help.
+
+## Confidence in Academic Success
+```{r}
+get_mode(Study_Habits$`Confidence in Academic success`)
+```
+The most frequent value is "Moderately confident". This shows that the majority of participants feel moderately confident about their academic success.
+
+```{r}
+median(Study_Habits$`Confidence in Academic success`)
+```
+This means that 50% of the participants feel more confident than "Moderately confident", and the other 50% are less confident.
+
+### Variability Measures:
+```{r}
+range(Study_Habits$`Confidence in Academic success`)
+```
+It shows that the most confident one chose "Extremely confident", and the least one chose "Very confident".
+
+As this variable is not numerical, we cannot calculate the IQR.
+
+```{r}
+success_counts <- table(Study_Habits$`Confidence in Academic success`)
+barplot(success_counts, las = 2)
+```
+The graph shows that the highest portion of participants feel moderately confident about their academic success.
+
+## Study Habits Impact
+```{r}
+get_mode(Study_Habits$`Study Habits Impact`)
+```
+The most frequent value is "Somewhat positively". This shows that the majority of participants feel that their study habits affect them somewhat positively.
+
+```{r}
+median(Study_Habits$`Study Habits Impact`)
+```
+This means that 50% of the participants' study habits affect them more positively than "Somewhat positively", and the other 50% are less organized.
+
+### Variability Measures:
+```{r}
+range(Study_Habits$`Study Habits Impact`)
+```
+It shows that the most positively affected ones chose "Very positively", and the most negatively affected ones chose "Negatively".
+
+As this variable is not numerical, we cannot calculate the IQR.
+
+```{r}
+habits_counts <- table(Study_Habits$`Study Habits Impact`)
+barplot(habits_counts, las = 2)
+```
+The graph shows that the highest portion of participants feel that their study habits affect them somewhat positively.
+
+## GPA
+
+```{r}
+mean(Study_Habits$GPA)
+```
+it appears that the average GPA of all participants was 4.56 which is impossible to happen, meaning we have outliers
+```{r}
+get_mode(Study_Habits$GPA)
+```
+The most frequent value is 3.5
+```{r}
+median(Study_Habits$GPA)
+```
+This means that 50% of the participants have a GPA above 3.7 and the other 50% have below it.
+### Variability Measures:
+```{r}
+range(Study_Habits$GPA)
+```
+it shows that the highest participant got 94 out of 4 (outlier) , and the lowest is 0 out of 4 (Outlier), making the range = 94-0=94
+
+```{r}
+IQR(Study_Habits$GPA)
+```
+The difference between the 75th percentile of the GPAs and the 25th percentile = 0.3
+```{r}
+var(Study_Habits$GPA)
+```
+It appears that the variability between the data is 107.4993
+```{r}
+sd(Study_Habits$GPA)
+```
+It shows that the standard deviation of the data is 10.36819, leading to a very big variability between the data
+```{r}
+GPA <- as.numeric(Study_Habits$GPA)
+hist(GPA, main = "Histogram of GPA")
+```
+The graph shows that the distribution is skewed to the right because of the outliers who entered their GPA on a scale out of 100, not 4.
+
+```{r}
+boxplot(GPA, main = "Box Plot of GPA")
+```
+The box plot shows that we have many outliers. So, we have to remove them.
+
+### Remove Outliers Based on IQR and Values Greater Than 4:
+```{r}
+GQ1 <- quantile(GPA, 0.25)
+GQ3 <- quantile(GPA, 0.75)
+GIQR_value <- GQ3 - GQ1
+Glower_bound <- GQ1 - 1.5 * GIQR_value
+Gupper_bound <- GQ3 + 1.5 * GIQR_value
+Study_Habits$GPA <- as.numeric(as.character(Study_Habits$GPA))
+filtered_GPA <- Study_Habits[Study_Habits$GPA >= Glower_bound & Study_Habits$GPA <= Gupper_bound & Study_Habits$GPA <= 4, ]
+```
+
+#### Updated Box Plot:
+```{r}
+boxplot(filtered_GPA$GPA, main = "Boxplot of Filtered GPA")
+```
+
+#### Updated Central Measures:
+```{r}
+mean(filtered_GPA$GPA)
+```
+It appears that the average of the GPA of treated data was 3.666 instead of 4.56
+
+```{r}
+get_mode(filtered_GPA$GPA)
+```
+No change in mode.
+
+```{r}
+median(filtered_GPA$GPA)
+```
+No change in the median as it isn't affected by outliers.
+
+#### Updated Variability Measures:
+```{r}
+range(filtered_GPA$GPA)
+```
+It shows that the participant with the highest GPA got 4.0, and the one with the lowest GPA got 3.1 instead of 94 and 0
+
+```{r}
+IQR(filtered_GPA$GPA)
+```
+No change in IQR as it isn't affected by outliers.
+
+```{r}
+var(filtered_GPA$GPA)
+```
+The new variability between the data is 0.05 which is very different from the old one
+
+```{r}
+sd(filtered_GPA$GPA)
+```
+It shows that the standard deviation of the treated data is 0.22instead of 10.37
+
+## Studying Hours
+As this variable is Ratio, we can calculate all of the central and variability measures.
+
+```{r}
+mean(Study_Habits$`Studying hours`)
+```
+it appears that the average of the studying hours per week of all participants was 21.9
+
+```{r}
+get_mode(Study_Habits$`Studying hours`)
+```
+The most frequent number of hours is 30. 
+
+```{r}
+median(Study_Habits$`Studying hours`)
+```
+This means that 50% of the participants study more than 21 hours peer week and the other 50% study less than it.
+
+### Variability Measures:
+```{r}
+range(Study_Habits$`Studying hours`)
+```
+it shows that the one with the highest studying hours per week study 60 hours, and the least study 2, making the range = 60-2=58
+
+```{r}
+IQR(Study_Habits$`Studying hours`)
+```
+The difference between the 75th percentile of the ages and the 25th percentile = 20
+
+```{r}
+var(Study_Habits$`Studying hours`)
+```
+It appears that the variability between the data is 172.45 hours^2
+
+```{r}
+sd(Study_Habits$`Studying hours`)
+```
+It shows that the standard deviation of the data is 13.13
+
+```{r}
+Study_Habits$`Studying hours` <- as.numeric(as.character(Study_Habits$`Studying hours`))
+hist(Study_Habits$`Studying hours`, main = "Histogram of Studying Hours")
+```
+The graph shows that the distribution is skewed to the right.
+
+```{r}
+boxplot(Study_Habits$`Studying hours`, main = "Box Plot of Studying Hours")
+```
+The box plot shows that we don't have any outliers.
+
